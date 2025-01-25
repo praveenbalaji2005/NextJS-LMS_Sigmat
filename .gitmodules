@@ -1,3 +1,8 @@
 [submodule "frontend"]
 	path = frontend
 	url = https://github.com/VishaL6i9/NextJS-LMS_Sigmat.git
+	branch = main
+[submodule "backend"]
+	path = backend
+	url = https://github.com/VishaL6i9/SpringBoot-LMS_Sigmat.git
+	branch = main
