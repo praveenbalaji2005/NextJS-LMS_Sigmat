@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Instructor Dashboard</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f0f0f0;
+            text-align: center;
+            margin: 0;
+            padding: 0;
+        }
+        .container {
+            width: 50%;
+            margin: 20px auto;
+            background: white;
+            padding: 20px;
+            border-radius: 5px;
+            box-shadow: 0px 0px 10px gray;
+        }
+        .btn {
+            display: block;
+            width: 100%;
+            padding: 10px;
+            margin: 10px 0;
+            background-color: blue;
+            color: white;
+            border: none;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        .btn:hover { background-color: darkblue; }
+        .hidden { display: none; }
+        label, input, select, textarea {
+            display: block;
+            width: 100%;
+            margin: 10px 0;
+            padding: 8px;
+            font-size: 14px;
+        }
+        .footer {
+            position: fixed;
+            bottom: 0;
+            width: 100%;
+            background: #333;
+            color: white;
+            text-align: center;
+            padding: 10px 0;
+        }
+        .course-list {
+            margin: 20px 0;
+            text-align: left;
+        }
+        .course-list table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        .course-list table th, .course-list table td {
+            padding: 10px;
+            text-align: left;
+            border: 1px solid #ddd;
+        }
+        .course-list button {
+            padding: 5px 10px;
+            background-color: blue;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+        .course-list button:hover {
+            background-color: darkblue;
+        }
+    </style>
+</head>
+<body>
+
+<header>
+    <h1>Welcome Instructor</h1>
+</header>
+
+<div class="container">
+    <button class="btn" onclick="loadCreateForm()">Create New Course</button>
+    <button class="btn" onclick="manageCourses()">Manage Courses</button>
+    
+    <div id="formContainer" class="hidden"></div>
+    <div id="manageContainer" class="hidden">
+        <div class="course-list" id="courseListContainer"></div>
+    </div>
+</div>
+
+<div class="footer">@2025 LMS All rights reserved</div>
+
+<script>
+    let courses = [];
+    let editingIndex = null;
+    let currentPage = 0;
+
+    const fields = [
+        { label: "Course Name", id: "courseName", type: "text", required: true },
+        { label: "Course Code", id: "courseCode", type: "text", required: true },
+        { label: "Description", id: "courseDescription", type: "textarea" },
+        { label: "Category", id: "courseCategory", type: "select", options: ["Science", "Math", "Arts"], required: true },
+        { label: "Instructor(s)", id: "courseInstructor", type: "select-multiple", options: ["Instructor 1", "Instructor 2"], required: true },
+        { label: "Start Date", id: "courseStartDate", type: "date", required: true },
+        { label: "End Date", id: "courseEndDate", type: "date" },
+        { label: "Duration", id: "courseDuration", type: "number" },
+        { label: "Mode of Delivery", id: "courseMode", type: "select", options: ["Online", "Offline", "Blended"], required: true },
+        { label: "Maximum Enrollments", id: "maxEnrollments", type: "number" },
+        { label: "Course Fee", id: "courseFee", type: "number" },
+        { label: "Prerequisites", id: "prerequisites", type: "select-multiple", options: ["Course A", "Course B"] },
+        { label: "Course Materials", id: "courseMaterials", type: "file", accept: ".pdf,.docx,.pptx" },
+        { label: "Learning Objectives", id: "learningObjectives", type: "textarea" },
+        { label: "Assessment Type", id: "assessmentType", type: "select", options: ["Quizzes", "Assignments", "Final Exam"] },
+        { label: "Language", id: "language", type: "select", options: ["English", "French"], required: true },
+        { label: "Course Image", id: "courseImage", type: "file", accept: ".png,.jpg,.jpeg" },
+        { label: "Publish Status", id: "publishStatus", type: "select", options: ["Draft", "Published", "Archived"], required: true },
+        { label: "Tags", id: "tags", type: "text" },
+        { label: "Certificate Issuance", id: "certificateIssuance", type: "checkbox" }
+    ];
+
+    function loadCreateForm(index = null) {
+        document.getElementById('manageContainer').classList.add('hidden');
+        const formContainer = document.getElementById('formContainer');
+        formContainer.style.display = 'block';
+        editingIndex = index !== null ? index : null;
+        currentPage = 0;
+        renderForm();
+    }
+
+    function renderForm() {
+        const formContainer = document.getElementById('formContainer');
+        formContainer.innerHTML = `<h3>${editingIndex !== null ? 'Edit' : 'Create'} Course</h3>`;
+        
+        let start = currentPage * 5;
+        let end = start + 5;
+        let course = editingIndex !== null ? courses[editingIndex] : {};
+
+        fields.slice(start, end).forEach(field => {
+            formContainer.innerHTML += `<label>${field.label}</label>`;
+            if (field.type === "select") {
+                let options = field.options.map(opt => `<option ${course[field.id] === opt ? 'selected' : ''}>${opt}</option>`).join('');
+                formContainer.innerHTML += `<select id="${field.id}">${options}</select>`;
+            } else if (field.type === "select-multiple") {
+                let options = field.options.map(opt => `<option value="${opt}" ${course[field.id]?.includes(opt) ? 'selected' : ''}>${opt}</option>`).join('');
+                formContainer.innerHTML += `<select id="${field.id}" multiple>${options}</select>`;
+            } else {
+                formContainer.innerHTML += `<input type="${field.type}" id="${field.id}" value="${course[field.id] || ''}" required>`;
+            }
+        });
+
+        formContainer.innerHTML += `
+            ${currentPage > 0 ? '<button class="btn" onclick="prevPage()">Previous</button>' : ''}
+            ${end < fields.length ? '<button class="btn" onclick="nextPage()">Next</button>' : ''}
+            <button class="btn" onclick="addCourse(event)">${editingIndex !== null ? 'Update' : 'Create'} Course</button>
+        `;
+    }
+
+    function nextPage() {
+        if ((currentPage + 1) * 5 < fields.length) {
+            currentPage++;
+            renderForm();
+        }
+    }
+
+    function prevPage() {
+        if (currentPage > 0) {
+            currentPage--;
+            renderForm();
+        }
+    }
+
+    function addCourse(event) {
+        event.preventDefault();
+        let courseData = {};
+        fields.forEach(field => {
+            let element = document.getElementById(field.id);
+            if (element) {
+                if (field.type === "select-multiple") {
+                    courseData[field.id] = [...element.options].filter(opt => opt.selected).map(opt => opt.value);
+                } else if (field.type === "checkbox") {
+                    courseData[field.id] = element.checked;
+                } else {
+                    courseData[field.id] = element.value;
+                }
+            }
+        });
+
+        if (editingIndex !== null) {
+            courses[editingIndex] = courseData;
+            alert("Course updated successfully!");
+        } else {
+            courses.push(courseData);
+            alert("Course created successfully!");
+        }
+
+        document.getElementById("formContainer").innerHTML = "";
+        document.getElementById("formContainer").classList.add("hidden");
+    }
+
+    function manageCourses() {
+        document.getElementById('formContainer').classList.add('hidden');
+        const manageContainer = document.getElementById('manageContainer');
+        manageContainer.style.display = 'block';
+        renderCourseList();
+    }
+
+    function renderCourseList() {
+        const courseListContainer = document.getElementById('courseListContainer');
+        courseListContainer.innerHTML = `
+            <h3>Manage Courses</h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Course Name</th>
+                        <th>Course Code</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${courses.map((course, index) => `
+                        <tr>
+                            <td>${course.courseName}</td>
+                            <td>${course.courseCode}</td>
+                            <td>
+                                <button onclick="loadCreateForm(${index})">Edit</button>
+                                <button onclick="deleteCourse(${index})">Delete</button>
+                            </td>
+                        </tr>
+                    `).join('')}
+                </tbody>
+            </table>
+        `;
+    }
+
+    function deleteCourse(index) {
+        if (confirm("Are you sure you want to delete this course?")) {
+            courses.splice(index, 1);
+            alert("Course deleted successfully!");
+            renderCourseList();
+        }
+    }
+</script>
+
+</body>
+</html>
